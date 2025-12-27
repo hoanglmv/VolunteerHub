@@ -28,7 +28,7 @@ Content-Type: application/json
 %}
 
 ### ==========================================
-### 3. ĐĂNG KÝ TÌNH NGUYỆN VIÊN (Sửa Role thành VOLUNTEER)
+### 3. ĐĂNG KÝ TÌNH NGUYỆN VIÊN (Role: VOLUNTEER)
 ### ==========================================
 POST http://localhost:8080/auth/register
 Content-Type: application/json
@@ -72,6 +72,7 @@ Content-Type: application/json
 }
 
 > {%
+    // Lấy ID sự kiện vừa tạo (Mặc định là 1 nếu chạy lần đầu)
     client.global.set("eventId", response.body.id);
     client.log("Created Event ID: " + response.body.id);
 %}
@@ -94,14 +95,12 @@ Authorization: Bearer {{volunteerToken}}
 POST http://localhost:8080/participations/events/{{eventId}}
 Authorization: Bearer {{volunteerToken}}
 
-> {%
-    client.global.set("participationId", response.body.id);
-%}
-
 ### ==========================================
-### 9. ADMIN DUYỆT ĐƠN
+### 9. ADMIN DUYỆT ĐƠN (Fix cứng ID = 1)
 ### ==========================================
-PUT http://localhost:8080/participations/{{participationId}}/approve?isApproved=true
+# Vì chạy lại từ đầu nên ID đơn đăng ký chắc chắn là 1.
+# Ta điền trực tiếp số 1 để tránh lỗi script không bắt được biến.
+PUT http://localhost:8080/participations/1/approve?isApproved=true
 Authorization: Bearer {{adminToken}}
 
 ### ==========================================
