@@ -1,0 +1,145 @@
+### ==========================================
+### 1. ĐĂNG KÝ ADMIN
+### ==========================================
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin_final@gmail.com",
+  "password": "123",
+  "fullName": "Admin Final",
+  "role": "ADMIN"
+}
+
+### ==========================================
+### 2. ĐĂNG NHẬP ADMIN (Lấy Token)
+### ==========================================
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin_final@gmail.com",
+  "password": "123"
+}
+
+> {%
+    client.global.set("adminToken", response.body.trim());
+    client.log("Admin Token: " + client.global.get("adminToken"));
+%}
+
+### ==========================================
+### 3. ĐĂNG KÝ TÌNH NGUYỆN VIÊN (Sửa Role thành VOLUNTEER)
+### ==========================================
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "email": "tnv_final@gmail.com",
+  "password": "123",
+  "fullName": "Nguyen Van Tinh Nguyen",
+  "role": "VOLUNTEER"
+}
+
+### ==========================================
+### 4. ĐĂNG NHẬP TÌNH NGUYỆN VIÊN
+### ==========================================
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "tnv_final@gmail.com",
+  "password": "123"
+}
+
+> {%
+    client.global.set("volunteerToken", response.body.trim());
+    client.log("Volunteer Token: " + client.global.get("volunteerToken"));
+%}
+
+### ==========================================
+### 5. ADMIN TẠO SỰ KIỆN (Năm 2026)
+### ==========================================
+POST http://localhost:8080/events
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Chiến dịch Mùa Hè Xanh 2026",
+  "description": "Dọn dẹp bãi biển Vũng Tàu",
+  "location": "Vũng Tàu",
+  "startTime": "2026-06-01T08:00:00",
+  "endTime": "2026-06-01T17:00:00"
+}
+
+> {%
+    client.global.set("eventId", response.body.id);
+    client.log("Created Event ID: " + response.body.id);
+%}
+
+### ==========================================
+### 6. ADMIN DUYỆT SỰ KIỆN
+### ==========================================
+PUT http://localhost:8080/events/{{eventId}}/status?status=APPROVED
+Authorization: Bearer {{adminToken}}
+
+### ==========================================
+### 7. TNV TÌM KIẾM SỰ KIỆN
+### ==========================================
+GET http://localhost:8080/events/search?keyword=Mùa Hè&page=0&size=10
+Authorization: Bearer {{volunteerToken}}
+
+### ==========================================
+### 8. TNV ĐĂNG KÝ THAM GIA
+### ==========================================
+POST http://localhost:8080/participations/events/{{eventId}}
+Authorization: Bearer {{volunteerToken}}
+
+> {%
+    client.global.set("participationId", response.body.id);
+%}
+
+### ==========================================
+### 9. ADMIN DUYỆT ĐƠN
+### ==========================================
+PUT http://localhost:8080/participations/{{participationId}}/approve?isApproved=true
+Authorization: Bearer {{adminToken}}
+
+### ==========================================
+### 10. TNV XEM THÔNG BÁO
+### ==========================================
+GET http://localhost:8080/notifications
+Authorization: Bearer {{volunteerToken}}
+
+### ==========================================
+### 11. TNV ĐĂNG BÀI VIẾT
+### ==========================================
+POST http://localhost:8080/social/events/{{eventId}}/posts
+Authorization: Bearer {{volunteerToken}}
+Content-Type: application/json
+
+{
+  "content": "Háo hức quá mọi người ơi!",
+  "image": "https://example.com/bien.jpg"
+}
+
+> {%
+    client.global.set("postId", response.body.id);
+%}
+
+### ==========================================
+### 12. ADMIN THẢ TIM
+### ==========================================
+POST http://localhost:8080/social/posts/{{postId}}/like
+Authorization: Bearer {{adminToken}}
+
+### ==========================================
+### 13. ADMIN XEM DASHBOARD
+### ==========================================
+GET http://localhost:8080/dashboard/stats
+Authorization: Bearer {{adminToken}}
+
+### ==========================================
+### 14. ADMIN XUẤT CSV
+### ==========================================
+GET http://localhost:8080/events/export
+Authorization: Bearer {{adminToken}}
