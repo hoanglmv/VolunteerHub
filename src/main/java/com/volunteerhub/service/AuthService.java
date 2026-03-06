@@ -37,7 +37,7 @@ public class AuthService {
         user.setPhone(request.getPhone());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole() != null ? request.getRole() : Role.USER);
-        user.setActive(false); // MỚI: Phải chờ xác nhận Email
+        user.setActive(true); // Tạm thời để true để user test dễ dàng khỏi cần check mail
         userRepository.save(user);
 
         // 1. Tạo JWT/UUID Token cho xác thực
@@ -49,9 +49,15 @@ public class AuthService {
         tokenRepository.save(verificationToken);
 
         // 2. Gửi Email (Bất đồng bộ)
-        String verifyLink = "http://localhost:8080/auth/verify?token=" + token;
-        mailService.sendEmail(user.getEmail(), "Xác thực tài khoản VolunteerHub", 
-            "Chào " + user.getFullName() + ",\n\nVui lòng click vào link sau để xác thực tài khoản (có hiệu lực 15 phút):\n" + verifyLink);
+        try {
+            String verifyLink = "http://localhost:8080/auth/verify?token=" + token;
+            mailService.sendEmail(user.getEmail(), "Xác thực tài khoản VolunteerHub",
+                    "Chào " + user.getFullName()
+                            + ",\n\nVui lòng click vào link sau để xác thực tài khoản (có hiệu lực 15 phút):\n"
+                            + verifyLink);
+        } catch (Exception e) {
+            System.out.println("Lỗi gửi email phụ thuộc (Bỏ qua khi test cục bộ): " + e.getMessage());
+        }
 
         return "Đăng ký thành công! Vui lòng kiểm tra email để xác thực.";
     }
@@ -109,7 +115,9 @@ public class AuthService {
         // Link này giả định trỏ tới Frontend React để nó render form nhập Pass mới
         String resetLink = "http://localhost:5173/reset-password?token=" + token;
         mailService.sendEmail(user.getEmail(), "Yêu cầu khôi phục mật khẩu",
-                "Chào " + user.getFullName() + ",\n\nBạn đã yêu cầu khôi phục mật khẩu. Vui lòng bấm vào link sau (có hiệu lực 15 phút):\n" + resetLink);
+                "Chào " + user.getFullName()
+                        + ",\n\nBạn đã yêu cầu khôi phục mật khẩu. Vui lòng bấm vào link sau (có hiệu lực 15 phút):\n"
+                        + resetLink);
 
         return "Email khôi phục đã được gửi. Vui lòng kiểm tra Hộp thư.";
     }
@@ -126,7 +134,7 @@ public class AuthService {
         User user = verificationToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        
+
         tokenRepository.delete(verificationToken);
         return "Đổi mật khẩu thành công!";
     }

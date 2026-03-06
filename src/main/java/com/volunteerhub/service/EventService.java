@@ -57,6 +57,11 @@ public class EventService {
         return eventRepository.findAll();
     }
 
+    // 3.1 Lay danh sach su kien CHO DUYET (Cho Admin)
+    public List<Event> getPendingEvents() {
+        return eventRepository.findByStatus(EventStatus.PENDING);
+    }
+
     // 4. Duyet hoac Tu choi su kien
     public Event changeStatus(Long eventId, EventStatus status) {
         Event event = eventRepository.findById(eventId)

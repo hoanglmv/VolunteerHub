@@ -10,4 +10,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ReportRepository extends JpaRepository<Report, Long> {
     Page<Report> findByStatus(ReportStatus status, Pageable pageable);
+
+    long countByStatus(ReportStatus status);
 }

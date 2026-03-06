@@ -31,8 +31,10 @@ public class UserService {
     // 2. Cập nhật thông tin
     public User updateProfile(UpdateProfileRequest request) {
         User user = getCurrentUser();
-        if (request.getFullName() != null) user.setFullName(request.getFullName());
-        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getFullName() != null)
+            user.setFullName(request.getFullName());
+        if (request.getPhone() != null)
+            user.setPhone(request.getPhone());
         return userRepository.save(user);
     }
 
@@ -48,5 +50,17 @@ public class UserService {
         // Lưu pass mới
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    // 4. Lấy danh sách Users (Cho Admin)
+    public org.springframework.data.domain.Page<User> searchUsers(String keyword, int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return userRepository.searchUsers(keyword, pageable);
+    }
+
+    // 5. Xoá tài khoản cá nhân
+    public void deleteMyAccount() {
+        User user = getCurrentUser();
+        userRepository.delete(user);
     }
 }

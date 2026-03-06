@@ -46,6 +46,13 @@ public class EventController {
         return ResponseEntity.ok(eventService.getAllEvents());
     }
 
+    // 4. Lấy danh sách sự kiện chờ duyệt (Dành cho Admin)
+    @GetMapping("/pending")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<Event>> getPendingEvents() {
+        return ResponseEntity.ok(eventService.getPendingEvents());
+    }
+
     // 4. Duyet hoac Tu choi su kien (Chi ADMIN)
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAuthority('ADMIN')")
