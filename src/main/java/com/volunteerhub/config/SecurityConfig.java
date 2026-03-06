@@ -42,7 +42,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration configuration = new CorsConfiguration();
                     configuration.setAllowedOrigins(List.of("http://localhost:5173")); // Cho phép React gọi API
-                    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Các method cho phép
+                    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Các method
+                                                                                                         // cho phép
                     configuration.setAllowedHeaders(List.of("*")); // Cho phép mọi header (như Authorization)
                     configuration.setAllowCredentials(true);
                     return configuration;
@@ -50,12 +51,12 @@ public class SecurityConfig {
                 // =================================
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll() // Cho phép kết nối WebSocket
                         .requestMatchers("/events/**").authenticated()
                         // Cho phép API upload ảnh và xem ảnh không cần token (nếu cần)
                         .requestMatchers("/upload/**").authenticated()
                         .requestMatchers("/dashboard/**").authenticated() // Thêm dòng này cho chắc chắn
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -17,12 +17,16 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     public void createNotification(User user, String message) {
         Notification noti = new Notification();
         noti.setUser(user);
         noti.setMessage(message);
         notificationRepository.save(noti);
+
+        // Đẩy thông báo theo thời gian thực (Real-time Push) qua WebSocket
+        messagingTemplate.convertAndSend("/topic/user/" + user.getId() + "/notifications", noti);
     }
 
     public Page<Notification> getMyNotifications(int page, int size) {
