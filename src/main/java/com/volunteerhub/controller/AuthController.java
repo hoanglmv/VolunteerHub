@@ -18,24 +18,53 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        // (Code cũ giữ nguyên...)
         try {
-            User newUser = authService.register(request);
-            return ResponseEntity.ok("Đăng ký thành công! ID: " + newUser.getId());
+            // Đã sửa lại vì authService.register giờ trả về String Message 
+            String message = authService.register(request);
+            return ResponseEntity.ok(message);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // === API LOGIN MỚI ===
+    // === API LOGIN ===
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
             String token = authService.login(request);
-            // Trả về token cho người dùng
             return ResponseEntity.ok(token);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(e.getMessage()); // 401 Unauthorized
+            return ResponseEntity.status(401).body(e.getMessage());
+        }
+    }
+
+    // === API XÁC THỰC EMAIL ===
+    @GetMapping("/verify")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+        try {
+            return ResponseEntity.ok(authService.verifyEmail(token));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // === API YÊU CẦU QUÊN MẬT KHẨU ===
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        try {
+            return ResponseEntity.ok(authService.forgotPassword(email));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // === API ĐẶT LẠI MẬT KHẨU MỚI ===
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
+        try {
+            return ResponseEntity.ok(authService.resetPassword(token, newPassword));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

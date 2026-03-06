@@ -6,12 +6,13 @@ import com.volunteerhub.enums.EventStatus;
 import com.volunteerhub.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-// 👇 QUAN TRỌNG: Import này để dùng được tính năng Phân trang
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -21,7 +22,7 @@ public class EventController {
 
     private final EventService eventService;
 
-    // 1. Tạo sự kiện mới
+    // 1. Tao su kien moi
     @PostMapping
     public ResponseEntity<?> createEvent(@Valid @RequestBody EventRequest request) {
         try {
@@ -32,20 +33,20 @@ public class EventController {
         }
     }
 
-    // 2. Xem danh sách sự kiện (Đã duyệt) - Dành cho TNV (API cũ, trả về List)
+    // 2. Xem danh sach su kien (Da duyet)
     @GetMapping
     public ResponseEntity<List<Event>> getApprovedEvents() {
         return ResponseEntity.ok(eventService.getAllApprovedEvents());
     }
 
-    // 3. Xem tất cả sự kiện (Dành cho Admin quản lý)
+    // 3. Xem tat ca su kien (Danh cho Admin)
     @GetMapping("/all")
-    @PreAuthorize("hasAuthority('ADMIN')") // Bảo mật: Chỉ Admin mới xem được tất cả
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<Event>> getAllEvents() {
         return ResponseEntity.ok(eventService.getAllEvents());
     }
 
-    // 4. Duyệt hoặc Từ chối sự kiện (Chỉ ADMIN)
+    // 4. Duyet hoac Tu choi su kien (Chi ADMIN)
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<?> changeStatus(@PathVariable Long id, @RequestParam EventStatus status) {
@@ -57,14 +58,15 @@ public class EventController {
         }
     }
 
-    // 5. MỚI: API Tìm kiếm & Phân trang
-    // Cách dùng: GET /events/search?keyword=hcm&page=0&size=5
+    // 5. API Tim kiem & Phan trang Nang Cao
     @GetMapping("/search")
     public ResponseEntity<Page<Event>> searchEvents(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        return ResponseEntity.ok(eventService.searchEvents(keyword, page, size));
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(eventService.searchEvents(keyword, location, fromDate, toDate, page, size));
     }
 }

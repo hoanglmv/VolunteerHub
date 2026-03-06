@@ -6,12 +6,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "events")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE events SET is_deleted = true WHERE id=?")
+@Where(clause = "is_deleted=false")
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,6 +46,9 @@ public class Event {
     @ManyToOne
     @JoinColumn(name = "created_by_user_id")
     private User createdBy;
+
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
 
     @PrePersist
     protected void onCreate() {

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -23,17 +24,16 @@ public class EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
 
-    // Helper: Lấy User đang đăng nhập hiện tại
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay nguoi dung"));
     }
 
-    // 1. Tạo sự kiện (Mặc định là PENDING)
+    // 1. Tao su kien (Mac dinh la PENDING)
     public Event createEvent(EventRequest request) {
         if (request.getEndTime().isBefore(request.getStartTime())) {
-            throw new RuntimeException("Thời gian kết thúc phải sau thời gian bắt đầu");
+            throw new RuntimeException("Thoi gian ket thuc phai sau thoi gian bat dau");
         }
 
         Event event = new Event();
@@ -42,41 +42,34 @@ public class EventService {
         event.setLocation(request.getLocation());
         event.setStartTime(request.getStartTime());
         event.setEndTime(request.getEndTime());
-
-        // Gán người tạo là user đang đăng nhập
         event.setCreatedBy(getCurrentUser());
 
         return eventRepository.save(event);
     }
 
-    // 2. Lấy danh sách sự kiện ĐÃ DUYỆT (Cho Tình nguyện viên xem - List thường)
+    // 2. Lay danh sach su kien DA DUYET
     public List<Event> getAllApprovedEvents() {
         return eventRepository.findByStatus(EventStatus.APPROVED);
     }
 
-    // 3. Lấy TẤT CẢ sự kiện (Cho Admin quản lý)
+    // 3. Lay TAT CA su kien (Cho Admin)
     public List<Event> getAllEvents() {
         return eventRepository.findAll();
     }
 
-    // 4. Duyệt hoặc Từ chối sự kiện (Chức năng của Admin)
+    // 4. Duyet hoac Tu choi su kien
     public Event changeStatus(Long eventId, EventStatus status) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy sự kiện có ID: " + eventId));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay su kien co ID: " + eventId));
 
         event.setStatus(status);
         return eventRepository.save(event);
     }
 
-    // 5. MỚI: Tìm kiếm và Phân trang (Cho trang chủ)
-    public Page<Event> searchEvents(String keyword, int page, int size) {
-        // Sắp xếp mặc định: Mới nhất lên đầu
+    // 5. Tim kiem nang cao (Advanced Filtering)
+    public Page<Event> searchEvents(String keyword, String location, LocalDateTime fromDate, LocalDateTime toDate,
+            int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-
-        if (keyword != null && !keyword.isEmpty()) {
-            return eventRepository.searchEvents(keyword, pageable);
-        } else {
-            return eventRepository.findByStatus(EventStatus.APPROVED, pageable);
-        }
+        return eventRepository.searchEventsAdvanced(keyword, location, fromDate, toDate, pageable);
     }
 }

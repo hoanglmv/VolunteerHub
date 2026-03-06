@@ -3,10 +3,12 @@ package com.volunteerhub.service;
 import com.volunteerhub.entity.*;
 import com.volunteerhub.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -17,18 +19,18 @@ public class SocialService {
     private final CommentRepository commentRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
-    private final PostLikeRepository postLikeRepository; // MỚI THÊM: Để xử lý Like
+    private final PostLikeRepository postLikeRepository;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay nguoi dung"));
     }
 
-    // 1. Đăng bài mới
+    // 1. Dang bai moi
     public Post createPost(Long eventId, String content, String image) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Sự kiện không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Su kien khong ton tai"));
         User user = getCurrentUser();
 
         Post post = new Post();
@@ -40,10 +42,10 @@ public class SocialService {
         return postRepository.save(post);
     }
 
-    // 2. Viết bình luận
+    // 2. Viet binh luan
     public Comment addComment(Long postId, String content) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Bài viết không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Bai viet khong ton tai"));
         User user = getCurrentUser();
 
         Comment comment = new Comment();
@@ -54,25 +56,23 @@ public class SocialService {
         return commentRepository.save(comment);
     }
 
-    // 3. Xem các bài đăng trong sự kiện (Wall)
-    public List<Post> getEventPosts(Long eventId) {
-        return postRepository.findByEventIdOrderByCreatedAtDesc(eventId);
+    // 3. Xem cac bai dang trong su kien (Wall)
+    public Page<Post> getEventPosts(Long eventId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return postRepository.findByEventIdOrderByCreatedAtDesc(eventId, pageable);
     }
 
-    // 4. MỚI THÊM: Thả tim / Bỏ tim (Toggle Like)
+    // 4. Tha tim / Bo tim (Toggle Like)
     public void toggleLike(Long postId) {
         User user = getCurrentUser();
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Bài viết không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Bai viet khong ton tai"));
 
-        // Kiểm tra xem user này đã like bài này chưa
         Optional<PostLike> existingLike = postLikeRepository.findByUserIdAndPostId(user.getId(), postId);
 
         if (existingLike.isPresent()) {
-            // Nếu like rồi -> Xóa like (Unlike)
             postLikeRepository.delete(existingLike.get());
         } else {
-            // Nếu chưa like -> Tạo like mới
             PostLike like = new PostLike();
             like.setPost(post);
             like.setUser(user);

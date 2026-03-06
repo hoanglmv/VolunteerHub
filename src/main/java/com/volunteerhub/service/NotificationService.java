@@ -5,13 +5,16 @@ import com.volunteerhub.entity.User;
 import com.volunteerhub.repository.NotificationRepository;
 import com.volunteerhub.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
@@ -22,9 +25,10 @@ public class NotificationService {
         notificationRepository.save(noti);
     }
 
-    public List<Notification> getMyNotifications() {
+    public Page<Notification> getMyNotifications(int page, int size) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email).orElseThrow();
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+        Pageable pageable = PageRequest.of(page, size);
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
     }
 }

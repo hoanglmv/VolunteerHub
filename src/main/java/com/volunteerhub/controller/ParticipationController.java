@@ -1,13 +1,11 @@
 package com.volunteerhub.controller;
 
 import com.volunteerhub.entity.Participation;
-import com.volunteerhub.service.ParticipationService; // <--- QUAN TRỌNG: Phải có dòng import này
+import com.volunteerhub.service.ParticipationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/participations")
@@ -16,48 +14,51 @@ public class ParticipationController {
 
     private final ParticipationService participationService;
 
-    // === PHẦN CHO TÌNH NGUYỆN VIÊN (USER) ===
-
-    // 1. Đăng ký tham gia: POST /participations/events/{eventId}
+    // 1. Dang ky tham gia: POST /participations/events/{eventId}
     @PostMapping("/events/{eventId}")
     public ResponseEntity<?> registerEvent(@PathVariable Long eventId) {
         try {
             Participation p = participationService.registerEvent(eventId);
-            return ResponseEntity.ok("Đăng ký thành công! Mã đơn: " + p.getId());
+            return ResponseEntity.ok("Dang ky thanh cong! Ma don: " + p.getId());
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // 2. Hủy đăng ký: DELETE /participations/events/{eventId}
+    // 2. Huy dang ky: DELETE /participations/events/{eventId}
     @DeleteMapping("/events/{eventId}")
     public ResponseEntity<?> cancelEvent(@PathVariable Long eventId) {
         try {
             participationService.cancelRegistration(eventId);
-            return ResponseEntity.ok("Đã hủy đăng ký thành công.");
+            return ResponseEntity.ok("Da huy dang ky thanh cong.");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // 3. Xem lịch sử: GET /participations/history
+    // 3. Xem lich su: GET /participations/history
     @GetMapping("/history")
-    public ResponseEntity<List<Participation>> getMyHistory() {
-        return ResponseEntity.ok(participationService.getMyHistory());
+    public ResponseEntity<Page<Participation>> getMyHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(participationService.getMyHistory(page, size));
     }
 
-    // === PHẦN CHO QUẢN LÝ / ADMIN ===
-
-    // 4. Xem danh sách người tham gia sự kiện
+    // 4. Xem danh sach nguoi tham gia su kien
     @GetMapping("/event/{eventId}/users")
-    @PreAuthorize("hasAnyAuthority('ADMIN')") // Chỉ Admin mới được xem
-    public ResponseEntity<List<Participation>> getParticipants(@PathVariable Long eventId) {
-        return ResponseEntity.ok(participationService.getParticipantsByEvent(eventId));
+    public ResponseEntity<?> getParticipants(
+            @PathVariable Long eventId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            return ResponseEntity.ok(participationService.getParticipantsByEvent(eventId, page, size));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    // 5. Duyệt đơn đăng ký: PUT /participations/{id}/approve?isApproved=true
+    // 5. Duyet don dang ky: PUT /participations/{id}/approve?isApproved=true
     @PutMapping("/{id}/approve")
-    @PreAuthorize("hasAnyAuthority('ADMIN')") // Chỉ Admin mới được duyệt
     public ResponseEntity<?> approveParticipation(@PathVariable Long id, @RequestParam boolean isApproved) {
         try {
             return ResponseEntity.ok(participationService.approveParticipation(id, isApproved));

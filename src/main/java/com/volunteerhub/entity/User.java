@@ -5,8 +5,9 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@SQLDelete(sql = "UPDATE users SET is_deleted = true WHERE id=?")
+@Where(clause = "is_deleted=false")
 public class User implements UserDetails { // Implement UserDetails để tích hợp Spring Security
 
     @Id
@@ -44,22 +47,24 @@ public class User implements UserDetails { // Implement UserDetails để tích 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // MỚI THÊM: Trạng thái hoạt động (Mặc định là true)
-    // Nếu Admin set thành false -> User bị khóa, không đăng nhập được
-    @Column(name = "is_active")
-    private boolean isActive = true;
-
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
+
+    // Phục vụ tính năng Xác Thực Email
+    @Column(name = "is_active")
+    private boolean isActive = false;
 
     // === CÁC PHƯƠNG THỨC BẮT BUỘC CỦA SPRING SECURITY (USER DETAILS) ===
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // Trả về quyền hạn (Role) của user
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(role.name()));
     }
 
     @Override

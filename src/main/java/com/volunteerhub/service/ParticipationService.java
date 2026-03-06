@@ -9,20 +9,21 @@ import com.volunteerhub.repository.EventRepository;
 import com.volunteerhub.repository.ParticipationRepository;
 import com.volunteerhub.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class ParticipationService {
 
-    // Khai báo tất cả các dependency ở đầu class để Lombok @RequiredArgsConstructor tự inject
     private final ParticipationRepository participationRepository;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService; // Đưa lên đây
+    private final NotificationService notificationService;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -30,21 +31,19 @@ public class ParticipationService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // 1. Đăng ký tham gia (Mặc định là PENDING - Chờ duyệt)
+    // 1. Dang ky tham gia (Mac dinh la PENDING)
     public Participation registerEvent(Long eventId) {
         User user = getCurrentUser();
 
-        // Kiểm tra sự kiện
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Sự kiện không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Su kien khong ton tai"));
 
         if (event.getStatus() != EventStatus.APPROVED) {
-            throw new RuntimeException("Sự kiện chưa được duyệt hoặc đã đóng!");
+            throw new RuntimeException("Su kien chua duoc duyet hoac da dong!");
         }
 
-        // Kiểm tra trùng
         if (participationRepository.existsByUserIdAndEventId(user.getId(), eventId)) {
-            throw new RuntimeException("Bạn đã đăng ký sự kiện này rồi!");
+            throw new RuntimeException("Ban da dang ky su kien nay roi!");
         }
 
         Participation participation = new Participation();
@@ -55,48 +54,56 @@ public class ParticipationService {
         return participationRepository.save(participation);
     }
 
-    // 2. Hủy đăng ký
+    // 2. Huy dang ky
     public void cancelRegistration(Long eventId) {
         User user = getCurrentUser();
 
         Participation participation = participationRepository.findByUserIdAndEventId(user.getId(), eventId)
-                .orElseThrow(() -> new RuntimeException("Bạn chưa đăng ký sự kiện này!"));
+                .orElseThrow(() -> new RuntimeException("Ban chua dang ky su kien nay!"));
 
         participationRepository.delete(participation);
     }
 
-    // 3. Xem lịch sử tham gia của bản thân
-    public List<Participation> getMyHistory() {
+    // 3. Xem lich su tham gia cua ban than
+    public Page<Participation> getMyHistory(int page, int size) {
         User user = getCurrentUser();
-        return participationRepository.findByUserId(user.getId());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("registeredAt").descending());
+        return participationRepository.findByUserId(user.getId(), pageable);
     }
 
-    // === PHẦN QUẢN LÝ DUYỆT ĐƠN (ADMIN) ===
+    // 4. Lay danh sach nguoi dang ky cua 1 su kien
+    public Page<Participation> getParticipantsByEvent(Long eventId, int page, int size) {
+        User currentUser = getCurrentUser();
 
-    // 4. Lấy danh sách người đăng ký của 1 sự kiện
-    public List<Participation> getParticipantsByEvent(Long eventId) {
-        return participationRepository.findAll().stream()
-                .filter(p -> p.getEvent().getId().equals(eventId))
-                .toList();
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Su kien khong ton tai"));
+
+        if (!event.getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Chi nguoi tao su kien moi duoc xem danh sach dang ky.");
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("registeredAt").descending());
+        return participationRepository.findByEventId(eventId, pageable);
     }
 
-    // 5. Duyệt hoặc Từ chối đơn đăng ký (Có gửi thông báo)
+    // 5. Duyet hoac Tu choi don dang ky (Co gui thong bao)
     public Participation approveParticipation(Long participationId, boolean isApproved) {
         Participation p = participationRepository.findById(participationId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đăng ký"));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay don dang ky"));
+
+        User currentUser = getCurrentUser();
+        if (!p.getEvent().getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Chi nguoi tao su kien moi co quyen duyet don dang ky nay.");
+        }
 
         if (isApproved) {
-            p.setStatus(ParticipationStatus.CONFIRMED); // Duyệt
-
-            // GỬI THÔNG BÁO CHÚC MỪNG
+            p.setStatus(ParticipationStatus.CONFIRMED);
             notificationService.createNotification(p.getUser(),
-                    "Chúc mừng! Đơn đăng ký tham gia sự kiện '" + p.getEvent().getTitle() + "' đã được duyệt.");
+                    "Chuc mung! Don dang ky tham gia su kien '" + p.getEvent().getTitle() + "' da duoc duyet.");
         } else {
-            p.setStatus(ParticipationStatus.REJECTED);  // Từ chối
-
-            // GỬI THÔNG BÁO TỪ CHỐI
+            p.setStatus(ParticipationStatus.REJECTED);
             notificationService.createNotification(p.getUser(),
-                    "Rất tiếc. Đơn đăng ký tham gia sự kiện '" + p.getEvent().getTitle() + "' bị từ chối.");
+                    "Rat tiec. Don dang ky tham gia su kien '" + p.getEvent().getTitle() + "' bi tu choi.");
         }
         return participationRepository.save(p);
     }
