@@ -24,4 +24,16 @@ public class NotificationController {
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(notificationService.getMyNotifications(page, size));
     }
+
+    @org.springframework.web.bind.annotation.PutMapping("/{id}/read")
+    public ResponseEntity<Void> markAsRead(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        notificationService.markAsRead(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/read-all")
+    public ResponseEntity<Void> markAllAsRead() {
+        notificationService.markAllAsRead();
+        return ResponseEntity.ok().build();
+    }
 }

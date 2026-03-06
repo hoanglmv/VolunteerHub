@@ -35,20 +35,20 @@ public class UserController {
         return ResponseEntity.ok("Đổi mật khẩu thành công!");
     }
 
-    // Xóa tài khoản: DELETE /users/me
-    @DeleteMapping("/me")
-    public ResponseEntity<?> deleteMyAccount() {
-        userService.deleteMyAccount();
-        return ResponseEntity.ok("Tài khoản đã được xóa vĩnh viễn.");
-    }
-
-    // Danh sách người dùng (Admin): GET /users
+    // [Admin] Lấy toàn bộ danh sách users: GET /users
     @GetMapping
     @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<org.springframework.data.domain.Page<User>> searchUsers(
-            @RequestParam(required = false) String keyword,
+    public ResponseEntity<org.springframework.data.domain.Page<User>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(userService.searchUsers(keyword, page, size));
+        return ResponseEntity.ok(userService.getAllUsers(page, size));
+    }
+
+    // [Admin] Chỉnh sửa trạng thái khoá tài khoản người dùng: PUT
+    // /users/{id}/status?isActive=...
+    @PutMapping("/{id}/status")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<User> changeUserStatus(@PathVariable Long id, @RequestParam boolean isActive) {
+        return ResponseEntity.ok(userService.changeUserStatus(id, isActive));
     }
 }

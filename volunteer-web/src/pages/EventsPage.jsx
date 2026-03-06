@@ -9,45 +9,25 @@ export default function EventsPage() {
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
-    const [searchKeyword, setSearchKeyword] = useState('');
 
-    // Fake categories for UI design. 
-    // In a real DB, you might fetch these, but here we map them to the `keyword` filter or a specific column.
+    // Fake categories for UI design
     const categories = ['All', 'Môi trường', 'Giáo dục', 'Y tế', 'Hỗ trợ thảm họa', 'Bảo vệ Động vật'];
 
     useEffect(() => {
+        // In a real app we'd filter via API. For now fetching all.
         fetchEvents();
-    }, [activeCategory]);
+    }, []);
 
-    const fetchEvents = async (keywordOverride = null) => {
+    const fetchEvents = async () => {
         try {
             setIsLoading(true);
-            const keyword = keywordOverride !== null ? keywordOverride : searchKeyword;
-
-            // If activeCategory is not 'All', we append it to the keyword search (simple workaround without modifying backend schema again)
-            let finalKeyword = keyword;
-            if (activeCategory !== 'All') {
-                finalKeyword = keyword ? `${keyword} ${activeCategory}` : activeCategory;
-            }
-
-            const queryParams = new URLSearchParams();
-            queryParams.append('page', '0');
-            queryParams.append('size', '50');
-            if (finalKeyword) queryParams.append('keyword', finalKeyword);
-
-            const res = await axiosClient.get(`/events/search?${queryParams.toString()}`);
+            const res = await axiosClient.get('/events/search?page=0&size=20');
             setEvents(res.data.content || []);
         } catch (error) {
             console.error(error);
             toast.error("Không thể tải danh sách sự kiện");
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleSearchSubmit = (e) => {
-        if (e.key === 'Enter') {
-            fetchEvents(searchKeyword);
         }
     };
 
@@ -72,10 +52,7 @@ export default function EventsPage() {
                     <div className="relative group w-full md:w-80">
                         <input
                             type="text"
-                            value={searchKeyword}
-                            onChange={(e) => setSearchKeyword(e.target.value)}
-                            onKeyDown={handleSearchSubmit}
-                            placeholder="Nhập tên sự kiện (Enter)..."
+                            placeholder="Nhập tên sự kiện, tổ chức..."
                             className="pl-11 pr-4 py-3 w-full rounded-2xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all text-sm shadow-sm"
                         />
                         <Search className="absolute left-4 top-3.5 h-4 w-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />

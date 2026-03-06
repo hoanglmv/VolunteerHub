@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -12,7 +13,7 @@ const EventCard = ({ event, onJoin }) => {
             whileHover={{ y: -5 }}
             className="group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 overflow-hidden transition-all duration-300 flex flex-col h-full"
         >
-            <div className="relative h-48 overflow-hidden bg-gray-100">
+            <Link to={`/events/${event.id}`} className="relative h-48 overflow-hidden bg-gray-100 block">
                 <img
                     src={event.imageUrl || defaultImage}
                     alt={event.title}
@@ -21,12 +22,14 @@ const EventCard = ({ event, onJoin }) => {
                 <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-primary-600 shadow-sm">
                     {event.status === 'PUBLISHED' ? 'Đang mở' : 'Khép kín'}
                 </div>
-            </div>
+            </Link>
 
             <div className="p-6 flex-grow flex flex-col">
-                <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors">
-                    {event.title}
-                </h3>
+                <Link to={`/events/${event.id}`}>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors">
+                        {event.title}
+                    </h3>
+                </Link>
 
                 <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
                     {event.description}

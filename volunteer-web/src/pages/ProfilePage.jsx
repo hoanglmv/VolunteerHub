@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { motion } from 'framer-motion';
-import { User, Mail, Phone, Calendar, MapPin, CheckCircle2, XCircle, Clock, Settings, Shield, Award } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Mail, Phone, Calendar, MapPin, CheckCircle2, XCircle, Clock, Settings, Shield, Award, Edit2, KeyRound, Star, Heart } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function ProfilePage() {
@@ -15,26 +15,87 @@ export default function ProfilePage() {
     const [participations, setParticipations] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    const username = localStorage.getItem('username') || 'Người dùng';
-    const userRole = localStorage.getItem('role') || 'USER';
-    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=10b981&color=fff&size=128&bold=true`;
+    // User data state
+    const [userData, setUserData] = useState(null);
+    const [isEditingInfo, setIsEditingInfo] = useState(false);
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+    const [editForm, setEditForm] = useState({ fullName: '', phone: '' });
+    const [passForm, setPassForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+
+    const avatarUrl = userData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.fullName)}&background=10b981&color=fff&size=128&bold=true` : '';
 
     useEffect(() => {
-        if (activeTab === 'history') {
-            fetchParticipations();
+        fetchUserProfile();
+        fetchParticipations(); // Always fetch to get Gamification stats
+    }, []);
+
+    const fetchUserProfile = async () => {
+        try {
+            const res = await axiosClient.get('/users/profile');
+            setUserData(res.data);
+            setEditForm({ fullName: res.data.fullName || '', phone: res.data.phone || '' });
+        } catch (error) {
+            toast.error("Không thể tải thông tin cá nhân");
         }
-    }, [activeTab]);
+    };
 
     const fetchParticipations = async () => {
         try {
             setIsLoading(true);
-            const res = await axiosClient.get('/participations/my-events?page=0&size=10');
+            const res = await axiosClient.get('/participations/my-events?page=0&size=500');
             setParticipations(res.data.content || []);
         } catch (error) {
-            console.error(error);
             toast.error("Không thể lấy lịch sử tham gia");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // Gamification Logic
+    const getGamificationBadge = () => {
+        const approvedCount = participations.filter(p => p.status === 'APPROVED').length;
+        if (approvedCount === 0) return { name: "Thành viên mới", color: "text-gray-500", bg: "bg-gray-100", icon: <User className="w-4 h-4 mr-1" /> };
+        if (approvedCount <= 3) return { name: "Trái tim Đồng", color: "text-amber-700", bg: "bg-amber-100", icon: <Heart className="w-4 h-4 mr-1" /> };
+        if (approvedCount <= 10) return { name: "Trái tim Bạc", color: "text-gray-600", bg: "bg-gray-200", icon: <Star className="w-4 h-4 mr-1" /> };
+        return { name: "Trái tim Vàng", color: "text-yellow-600", bg: "bg-yellow-100", icon: <Award className="w-4 h-4 mr-1" /> };
+    };
+
+    const badge = getGamificationBadge();
+
+    const handleUpdateProfile = async () => {
+        if (!editForm.fullName.trim()) return toast.error("Tên không được để trống");
+
+        try {
+            const res = await axiosClient.put('/users/profile', editForm);
+            setUserData(res.data);
+            // Cập nhật lại tên trên LocalStorage nếu Navbar có dùng
+            localStorage.setItem('username', res.data.fullName);
+            setIsEditingInfo(false);
+            toast.success("Cập nhật thông tin thành công!");
+        } catch (error) {
+            toast.error("Cập nhật thất bại");
+        }
+    };
+
+    const handleChangePassword = async () => {
+        if (passForm.newPassword !== passForm.confirmPassword) {
+            return toast.error("Mật khẩu xác nhận không khớp!");
+        }
+        if (passForm.newPassword.length < 6) {
+            return toast.error("Mật khẩu mới phải có ít nhất 6 ký tự!");
+        }
+
+        try {
+            await axiosClient.put('/users/password', {
+                oldPassword: passForm.oldPassword,
+                newPassword: passForm.newPassword
+            });
+            toast.success("Đổi mật khẩu thành công!");
+            setIsChangingPassword(false);
+            setPassForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            toast.error(error.response?.data || "Đổi mật khẩu thất bại, kiểm tra lại mật khẩu cũ.");
         }
     };
 
@@ -48,6 +109,8 @@ export default function ProfilePage() {
                 return <span className="flex items-center text-yellow-600 bg-yellow-50 px-2.5 py-1 rounded-md text-xs font-medium"><Clock className="w-3.5 h-3.5 mr-1" /> Chờ duyệt</span>;
         }
     };
+
+    if (!userData) return <div className="min-h-screen flex items-center justify-center">Đang tải hồ sơ...</div>;
 
     return (
         <div className="min-h-screen bg-gray-50/50 py-10 px-4 sm:px-6 lg:px-8">
@@ -63,22 +126,32 @@ export default function ProfilePage() {
                                     <img src={avatarUrl} alt="Profile Avatar" className="h-full w-full object-cover" />
                                 </div>
                                 <div className="pb-2 hidden sm:block">
-                                    <h1 className="text-2xl font-bold text-gray-900">{username}</h1>
-                                    <p className="text-sm font-medium text-primary-600 flex items-center mt-1">
-                                        <Award className="w-4 h-4 mr-1" />
-                                        {userRole === 'ADMIN' ? 'Quản trị viên' : 'Thành viên Tích cực'}
-                                    </p>
+                                    <h1 className="text-2xl font-bold text-gray-900">{userData.fullName}</h1>
+                                    <div className="flex items-center space-x-3 mt-2">
+                                        <p className="text-sm font-medium text-primary-600 flex items-center">
+                                            <Shield className="w-4 h-4 mr-1" />
+                                            {userData.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên'}
+                                        </p>
+                                        <span className={`text-sm font-bold flex items-center px-2 py-0.5 rounded-md ${badge.bg} ${badge.color}`}>
+                                            {badge.icon} {badge.name}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Mobile Name Display */}
                         <div className="sm:hidden mb-6">
-                            <h1 className="text-2xl font-bold text-gray-900">{username}</h1>
-                            <p className="text-sm font-medium text-primary-600 flex items-center mt-1">
-                                <Award className="w-4 h-4 mr-1" />
-                                {userRole === 'ADMIN' ? 'Quản trị viên' : 'Thành viên Tích cực'}
-                            </p>
+                            <h1 className="text-2xl font-bold text-gray-900">{userData.fullName}</h1>
+                            <div className="flex items-center flex-wrap gap-2 mt-2">
+                                <p className="text-sm font-medium text-primary-600 flex items-center">
+                                    <Shield className="w-4 h-4 mr-1" />
+                                    {userData.role === 'ADMIN' ? 'Quản trị viên' : 'Thành viên'}
+                                </p>
+                                <span className={`text-sm font-bold flex items-center px-2 py-0.5 rounded-md ${badge.bg} ${badge.color}`}>
+                                    {badge.icon} {badge.name}
+                                </span>
+                            </div>
                         </div>
 
                         {/* Tabs */}
@@ -125,7 +198,7 @@ export default function ProfilePage() {
                             ) : participations.length === 0 ? (
                                 <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                                     <Award className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                    <h3 className="text-lg font-medium text-gray-900">Belum ada acara</h3>
+                                    <h3 className="text-lg font-medium text-gray-900">Chưa có sự kiện</h3>
                                     <p className="text-gray-500 mt-1">Bạn chưa đăng ký tham gia sự kiện nào.</p>
                                 </div>
                             ) : (
@@ -154,51 +227,84 @@ export default function ProfilePage() {
                         </motion.div>
                     )}
 
-                    {/* THÔNG TIN CÁ NHÂN TĨNH */}
+                    {/* THÔNG TIN CÁ NHÂN */}
                     {activeTab === 'info' && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                            <h2 className="text-xl font-bold text-gray-900 mb-6">Hồ sơ Tình nguyện viên</h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold text-gray-900">Hồ sơ Tình nguyện viên</h2>
+                                {!isEditingInfo ? (
+                                    <button onClick={() => setIsEditingInfo(true)} className="flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-1.5 rounded-lg transition-colors">
+                                        <Edit2 className="w-4 h-4 mr-1.5" /> Chỉnh sửa
+                                    </button>
+                                ) : (
+                                    <button onClick={() => setIsEditingInfo(false)} className="text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-1.5 transition-colors">
+                                        Hủy
+                                    </button>
+                                )}
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-500 mb-1">Họ và tên</label>
-                                        <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                            <User className="w-5 h-5 text-gray-400 mr-3" />
-                                            <span className="text-gray-900 font-medium">{username}</span>
-                                        </div>
+                                        {isEditingInfo ? (
+                                            <input
+                                                type="text"
+                                                value={editForm.fullName}
+                                                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                                                className="w-full p-2.5 bg-white rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                                            />
+                                        ) : (
+                                            <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                                <User className="w-5 h-5 text-gray-400 mr-3" />
+                                                <span className="text-gray-900 font-medium">{userData.fullName}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-500 mb-1">Email liên hệ</label>
-                                        <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100 opacity-70 cursor-not-allowed">
                                             <Mail className="w-5 h-5 text-gray-400 mr-3" />
-                                            <span className="text-gray-900 font-medium">Bảo mật (Chỉ hiển thị cho Ban Tổ Chức)</span>
+                                            <span className="text-gray-900 font-medium">{userData.email}</span>
                                         </div>
+                                        <p className="text-xs text-gray-400 mt-1">Ý! Email không thể thay đổi.</p>
                                     </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-500 mb-1">Số điện thoại</label>
-                                        <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                            <Phone className="w-5 h-5 text-gray-400 mr-3" />
-                                            <span className="text-gray-500 italic">Chưa cập nhật</span>
-                                        </div>
+                                        {isEditingInfo ? (
+                                            <input
+                                                type="text"
+                                                value={editForm.phone}
+                                                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                                placeholder="VD: 0912345678"
+                                                className="w-full p-2.5 bg-white rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                                            />
+                                        ) : (
+                                            <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                                <Phone className="w-5 h-5 text-gray-400 mr-3" />
+                                                <span className={`font-medium ${userData.phone ? 'text-gray-900' : 'text-gray-500 italic'}`}>{userData.phone || 'Chưa cập nhật'}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-500 mb-1">Cấp bậc</label>
                                         <div className="flex items-center p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-emerald-700">
                                             <Shield className="w-5 h-5 mr-3" />
-                                            <span className="font-semibold">{userRole === 'ADMIN' ? 'Administrator' : 'Volunteer'}</span>
+                                            <span className="font-semibold">{userData.role === 'ADMIN' ? 'Administrator' : 'Volunteer'}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="mt-8 flex justify-end">
-                                <button className="px-5 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 shadow-sm transition-colors">
-                                    Cập nhật thông tin
-                                </button>
-                            </div>
+                            {isEditingInfo && (
+                                <div className="mt-8 flex justify-end">
+                                    <button onClick={handleUpdateProfile} className="px-6 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 shadow-sm transition-colors flex items-center">
+                                        Lưu thay đổi
+                                    </button>
+                                </div>
+                            )}
                         </motion.div>
                     )}
 
@@ -208,14 +314,46 @@ export default function ProfilePage() {
                             <h2 className="text-xl font-bold text-gray-900 mb-6">Cài đặt & Bảo mật</h2>
 
                             <div className="space-y-6 max-w-2xl">
-                                <div className="p-5 border border-gray-100 rounded-2xl bg-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900">Đổi mật khẩu</h3>
-                                        <p className="text-sm text-gray-500 mt-1">Bạn nên đổi mật khẩu định kỳ để bảo đảm an toàn cho tài khoản.</p>
+                                <div className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden">
+                                    <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 flex items-center"><KeyRound className="w-4 h-4 mr-2" /> Đổi mật khẩu</h3>
+                                            <p className="text-sm text-gray-500 mt-1">Bạn nên đổi mật khẩu định kỳ để bảo đảm an toàn cho tài khoản.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsChangingPassword(!isChangingPassword)}
+                                            className={`px-4 py-2 font-medium rounded-lg transition-colors whitespace-nowrap ${isChangingPassword ? 'bg-gray-100 text-gray-700' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'}`}
+                                        >
+                                            {isChangingPassword ? 'Đóng' : 'Thay đổi'}
+                                        </button>
                                     </div>
-                                    <button className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">
-                                        Thay đổi
-                                    </button>
+
+                                    <AnimatePresence>
+                                        {isChangingPassword && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="px-5 pb-5 border-t border-gray-50 pt-4 bg-gray-50/50"
+                                            >
+                                                <div className="space-y-4 max-w-sm">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu hiện tại</label>
+                                                        <input type="password" value={passForm.oldPassword} onChange={e => setPassForm({ ...passForm, oldPassword: e.target.value })} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
+                                                        <input type="password" value={passForm.newPassword} onChange={e => setPassForm({ ...passForm, newPassword: e.target.value })} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tiết lộ mật khẩu mới (Xác nhận)</label>
+                                                        <input type="password" value={passForm.confirmPassword} onChange={e => setPassForm({ ...passForm, confirmPassword: e.target.value })} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none" />
+                                                    </div>
+                                                    <button onClick={handleChangePassword} className="w-full py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors">Cập nhật Mật khẩu</button>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
 
                                 <div className="p-5 border border-gray-100 rounded-2xl bg-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -234,21 +372,7 @@ export default function ProfilePage() {
                                         <h3 className="font-semibold text-red-700">Xóa tài khoản</h3>
                                         <p className="text-sm text-red-600/80 mt-1">Dữ liệu tham gia của bạn sẽ bị vô hiệu hóa vĩnh viễn.</p>
                                     </div>
-                                    <button
-                                        onClick={async () => {
-                                            if (window.confirm("Bạn có chắc chắn muốn xóa tài khoản này không? Hành động này không thể hoàn tác.")) {
-                                                try {
-                                                    await axiosClient.delete('/users/me');
-                                                    toast.success("Tài khoản đã được xóa.");
-                                                    localStorage.clear();
-                                                    window.location.href = '/login';
-                                                } catch (err) {
-                                                    toast.error("Lỗi khi xóa tài khoản.");
-                                                }
-                                            }
-                                        }}
-                                        className="px-4 py-2 border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-100 transition-colors whitespace-nowrap bg-white"
-                                    >
+                                    <button className="px-4 py-2 border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-100 transition-colors whitespace-nowrap bg-white cursor-pointer">
                                         Xóa ngay
                                     </button>
                                 </div>

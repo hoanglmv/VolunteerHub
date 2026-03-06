@@ -35,4 +35,28 @@ public class NotificationService {
         Pageable pageable = PageRequest.of(page, size);
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
     }
+
+    public void markAsRead(Long notificationId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElseThrow();
+
+        Notification noti = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông báo"));
+
+        if (!noti.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Không có quyền truy cập thông báo này");
+        }
+
+        noti.setRead(true);
+        notificationRepository.save(noti);
+    }
+
+    public void markAllAsRead() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email).orElseThrow();
+
+        java.util.List<Notification> unreadNotis = notificationRepository.findByUserIdAndIsReadFalse(user.getId());
+        unreadNotis.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(unreadNotis);
+    }
 }

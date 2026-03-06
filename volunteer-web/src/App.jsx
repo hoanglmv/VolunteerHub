@@ -6,6 +6,10 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import CreateEventPage from './pages/CreateEventPage';
 import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
+import CreateArticlePage from './pages/CreateArticlePage';
+import ArticleDetailPage from './pages/ArticleDetailPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
@@ -35,6 +39,22 @@ function App() {
 
                         <Route path="/events" element={
                             <PrivateRoute><EventsPage /></PrivateRoute>
+                        } />
+
+                        <Route path="/events/:id" element={
+                            <PrivateRoute><EventDetailPage /></PrivateRoute>
+                        } />
+
+                        <Route path="/leaderboard" element={
+                            <PrivateRoute><LeaderboardPage /></PrivateRoute>
+                        } />
+
+                        <Route path="/create-news" element={
+                            <PrivateRoute><CreateArticlePage /></PrivateRoute>
+                        } />
+
+                        <Route path="/news/:id" element={
+                            <PrivateRoute><ArticleDetailPage /></PrivateRoute>
                         } />
 
                         {/* Thêm Route cho hồ sơ và cài đặt sử dụng chung component ProfilePage với tab ẩn bên trong */}

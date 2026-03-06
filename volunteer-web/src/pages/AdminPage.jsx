@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Users, FileText, Flag, CheckCircle2, XCircle, Trash2, ShieldAlert, CheckSquare } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
 import { toast } from 'react-toastify';
+import { motion } from 'framer-motion';
+import { Users, FileText, Flag, CheckCircle2, XCircle, Trash2, ShieldAlert, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function AdminPage() {
     const [activeTab, setActiveTab] = useState('events'); // events, reports, users
-    const [stats, setStats] = useState({ totalUsers: 0, totalEvents: 0, pendingEvents: 0, pendingReports: 0 });
 
     const [pendingEvents, setPendingEvents] = useState([]);
-    const [reports, setReports] = useState([]);
+    const [reportedContent, setReportedContent] = useState([]);
     const [users, setUsers] = useState([]);
-    const [userSearch, setUserSearch] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    const [stats, setStats] = useState({ totalUsers: 0, totalEvents: 0, totalParticipations: 0 });
 
     useEffect(() => {
         fetchStats();
@@ -27,7 +27,7 @@ export default function AdminPage() {
             const res = await axiosClient.get('/dashboard/stats');
             setStats(res.data);
         } catch (error) {
-            console.error("Lỗi tải thống kê", error);
+            console.error(error);
         }
     };
 
@@ -35,9 +35,9 @@ export default function AdminPage() {
         try {
             setIsLoading(true);
             const res = await axiosClient.get('/events/pending');
-            setPendingEvents(res.data || []);
+            setPendingEvents(res.data.content || []);
         } catch (error) {
-            toast.error("Không thể tải Sự kiện chờ duyệt");
+            toast.error("Lỗi khi tải danh sách sự kiện chờ duyệt");
         } finally {
             setIsLoading(false);
         }
@@ -46,10 +46,10 @@ export default function AdminPage() {
     const fetchReports = async () => {
         try {
             setIsLoading(true);
-            const res = await axiosClient.get('/reports?status=PENDING&size=20');
-            setReports(res.data.content || []);
+            const res = await axiosClient.get('/reports?status=PENDING');
+            setReportedContent(res.data.content || []);
         } catch (error) {
-            toast.error("Không thể tải Báo cáo");
+            toast.error("Lỗi khi tải danh sách báo cáo");
         } finally {
             setIsLoading(false);
         }
@@ -58,45 +58,44 @@ export default function AdminPage() {
     const fetchUsers = async () => {
         try {
             setIsLoading(true);
-            const query = userSearch ? `?keyword=${encodeURIComponent(userSearch)}&size=50` : '?size=50';
-            const res = await axiosClient.get(`/users${query}`);
+            const res = await axiosClient.get('/users?page=0&size=50');
             setUsers(res.data.content || []);
         } catch (error) {
-            toast.error("Không thể tải Danh sách người dùng");
+            toast.error("Lỗi khi tải danh sách người dùng");
         } finally {
             setIsLoading(false);
         }
     };
 
+    // Actions
     const handleEventStatus = async (eventId, status) => {
         try {
             await axiosClient.put(`/events/${eventId}/status?status=${status}`);
-            toast.success(`Đã ${status === 'APPROVED' ? 'duyệt' : 'từ chối'} sự kiện!`);
+            toast.success(status === 'APPROVED' ? "Đã duyệt sự kiện thành công!" : "Đã từ chối sự kiện!");
             fetchPendingEvents();
             fetchStats();
         } catch (error) {
-            toast.error("Lỗi khi xử lý sự kiện");
+            toast.error("Thao tác thất bại.");
         }
     };
 
-    const handleReport = async (reportId, isSpam) => {
+    const handleResolveReport = async (reportId, isSpam) => {
         try {
             await axiosClient.put(`/reports/${reportId}/resolve?isSpam=${isSpam}`);
-            toast.success(isSpam ? 'Đã xóa sự kiện vi phạm!' : 'Đã bỏ qua báo cáo!');
+            toast.success(isSpam ? "Đã vô hiệu hóa nội dung theo Báo cáo." : "Đã bỏ qua báo cáo sai.");
             fetchReports();
-            fetchStats();
         } catch (error) {
-            toast.error("Lỗi xử lý báo cáo");
+            toast.error("Xử lý báo cáo thất bại.");
         }
     };
 
-    const handleUserSearch = (e) => {
-        setUserSearch(e.target.value);
-    };
-
-    const handleSearchSubmit = (e) => {
-        if (e.key === 'Enter') {
+    const handleUserStatus = async (userId, isActive) => {
+        try {
+            await axiosClient.put(`/users/${userId}/status?isActive=${isActive}`);
+            toast.success(isActive ? "Đã mở khóa người dùng." : "Đã khóa người dùng thành công.");
             fetchUsers();
+        } catch (error) {
+            toast.error("Lỗi cập nhật trạng thái người dùng.");
         }
     };
 
@@ -115,18 +114,18 @@ export default function AdminPage() {
                             <FileText className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Sự kiện chờ duyệt</p>
-                            <h3 className="text-2xl font-bold text-gray-900">{stats.pendingEvents}</h3>
+                            <p className="text-sm font-medium text-gray-500">Tổng sự kiện</p>
+                            <h3 className="text-2xl font-bold text-gray-900">{stats.totalEvents}</h3>
                         </div>
                     </div>
 
                     <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex items-center space-x-4">
-                        <div className="h-14 w-14 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
-                            <Flag className="h-7 w-7" />
+                        <div className="h-14 w-14 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                            <CheckSquare className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Báo cáo vi phạm</p>
-                            <h3 className="text-2xl font-bold text-gray-900">{stats.pendingReports}</h3>
+                            <p className="text-sm font-medium text-gray-500">Tổng lượt tham gia</p>
+                            <h3 className="text-2xl font-bold text-gray-900">{stats.totalParticipations}</h3>
                         </div>
                     </div>
 
@@ -135,7 +134,7 @@ export default function AdminPage() {
                             <Users className="h-7 w-7" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Tổng người dùng</p>
+                            <p className="text-sm font-medium text-gray-500">Tổng TNV / Người dùng</p>
                             <h3 className="text-2xl font-bold text-gray-900">{stats.totalUsers}</h3>
                         </div>
                     </div>
@@ -167,31 +166,23 @@ export default function AdminPage() {
 
                     {/* Tab Panels */}
                     <div className="p-6">
-                        {isLoading && (
-                            <div className="flex justify-center py-10">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                            </div>
-                        )}
 
                         {/* EVENT APPROVALS */}
-                        {!isLoading && activeTab === 'events' && (
+                        {activeTab === 'events' && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                                 <h2 className="text-lg font-bold text-gray-900 mb-4">Danh sách Sự kiện chờ duyệt</h2>
-                                {pendingEvents.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">Chưa có sự kiện nào chờ duyệt.</div>
-                                ) : (
+                                {isLoading ? <div className="text-center py-10 opacity-50">Đang tải...</div> : (
                                     <div className="space-y-4">
-                                        {pendingEvents.map(evt => (
-                                            <div key={evt.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
+                                        {pendingEvents.length === 0 ? <p className="text-gray-500 py-4 text-center">Không có sự kiện mới nào cần duyệt.</p> : pendingEvents.map(evt => (
+                                            <div key={evt.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
                                                 <div>
                                                     <h3 className="font-semibold text-gray-900">{evt.title}</h3>
-                                                    <p className="text-sm text-gray-600 mt-1 line-clamp-1">{evt.description}</p>
-                                                    <div className="text-xs text-gray-500 mt-2 flex space-x-4">
-                                                        <span>Người tạo: <span className="font-medium text-gray-700">{evt.createdBy?.fullName || 'Ẩn danh'}</span></span>
-                                                        <span>Bắt đầu: {format(new Date(evt.startTime), 'dd/MM/yyyy HH:mm')}</span>
+                                                    <div className="text-sm text-gray-500 mt-1 flex space-x-4">
+                                                        <span>Người tạo: <span className="text-gray-700 font-medium">{evt.createdBy?.fullName || 'Ẩn danh'}</span></span>
+                                                        <span>Ngày nộp: {format(new Date(evt.createdAt), 'dd/MM/yyyy HH:mm')}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex space-x-2 mt-4 md:mt-0 flex-shrink-0">
+                                                <div className="flex space-x-2 mt-4 sm:mt-0">
                                                     <button onClick={() => handleEventStatus(evt.id, 'APPROVED')} className="flex items-center px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-semibold transition-colors">
                                                         <CheckCircle2 className="w-4 h-4 mr-1.5" /> Phê duyệt
                                                     </button>
@@ -207,31 +198,29 @@ export default function AdminPage() {
                         )}
 
                         {/* CONTENT REPORTS */}
-                        {!isLoading && activeTab === 'reports' && (
+                        {activeTab === 'reports' && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                <h2 className="text-lg font-bold text-red-600 mb-4">Báo cáo Mới cần xử lý</h2>
-                                {reports.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">Không có báo cáo vi phạm mới.</div>
-                                ) : (
+                                <h2 className="text-lg font-bold text-gray-900 mb-4 text-red-600">Báo cáo Mới cần xử lý</h2>
+                                {isLoading ? <div className="text-center py-10 opacity-50">Đang tải...</div> : (
                                     <div className="space-y-4">
-                                        {reports.map(rep => (
-                                            <div key={rep.id} className="flex flex-col md:flex-row md:items-start justify-between p-5 border border-red-100 bg-red-50/30 rounded-2xl">
+                                        {reportedContent.length === 0 ? <p className="text-gray-500 py-4 text-center">Tất cả sạch bóng! Không có báo cáo vi phạm nào.</p> : reportedContent.map(rep => (
+                                            <div key={rep.id} className="flex flex-col sm:flex-row sm:items-start justify-between p-5 border border-red-100 bg-red-50/30 rounded-2xl">
                                                 <div>
                                                     <div className="flex items-center space-x-2 mb-1">
                                                         <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-md">
-                                                            {rep.reason}
+                                                            Lý do: {rep.reason}
                                                         </span>
-                                                        <span className="text-xs text-gray-500">{format(new Date(rep.createdAt), 'dd/MM/yyyy HH:mm')}</span>
+                                                        <span className="text-xs text-gray-500">{format(new Date(rep.reportedAt), 'dd/MM/yyyy HH:mm')}</span>
                                                     </div>
-                                                    <h3 className="font-semibold text-gray-900 mt-2">Nội dung báo cáo (Sự kiện): <span className="text-blue-600">{rep.event?.title || 'Đã bị xóa'}</span></h3>
-                                                    <p className="text-sm text-gray-700 mt-1 italic">"{rep.details}"</p>
-                                                    <p className="text-xs text-gray-500 mt-2">Người báo cáo: {rep.reportedBy?.email || 'N/A'}</p>
+                                                    <h3 className="font-semibold text-gray-900 mt-2">Nội dung bị báo cáo: <span className="text-blue-600 hover:underline cursor-pointer">{rep.event?.title || 'Đã bị xoá'}</span></h3>
+                                                    <p className="text-sm text-gray-500 mt-1">Nội dung chi tiết báo cáo: <span className="italic">{rep.description}</span></p>
+                                                    <p className="text-sm text-gray-500">Người báo cáo: {rep.reporter?.email || 'Ẩn danh'}</p>
                                                 </div>
-                                                <div className="flex flex-col space-y-2 mt-4 md:mt-0 flex-shrink-0">
-                                                    <button onClick={() => handleReport(rep.id, true)} className="flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors">
-                                                        <Trash2 className="w-4 h-4 mr-1.5" /> Xác nhận & Xóa Sự Kiện
+                                                <div className="flex flex-col space-y-2 mt-4 sm:mt-0">
+                                                    <button onClick={() => handleResolveReport(rep.id, true)} className="flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors cursor-pointer">
+                                                        <Trash2 className="w-4 h-4 mr-1.5" /> Xóa nội dung
                                                     </button>
-                                                    <button onClick={() => handleReport(rep.id, false)} className="flex items-center justify-center px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors">
+                                                    <button onClick={() => handleResolveReport(rep.id, false)} className="flex items-center justify-center px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors cursor-pointer">
                                                         Bỏ qua (Báo cáo sai)
                                                     </button>
                                                 </div>
@@ -243,61 +232,65 @@ export default function AdminPage() {
                         )}
 
                         {/* USER MANAGEMENT */}
-                        {!isLoading && activeTab === 'users' && (
+                        {activeTab === 'users' && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                                <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-lg font-bold text-gray-900">Quản lý Tài khoản</h2>
                                     <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={userSearch}
-                                            onChange={handleUserSearch}
-                                            onKeyDown={handleSearchSubmit}
-                                            placeholder="Tìm email hoặc tên (Enter)..."
-                                            className="text-sm border border-gray-200 rounded-lg pl-3 pr-10 py-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-64"
-                                        />
+                                        <input type="text" placeholder="Tìm email hoặc tên..." className="text-sm border border-gray-200 rounded-lg pl-3 pr-10 py-2 focus:ring-primary-500 focus:border-primary-500 w-64" />
                                     </div>
                                 </div>
-                                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ tên</th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày tham gia</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
-                                            {users.map(u => (
-                                                <tr key={u.id} className="hover:bg-gray-50">
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="flex items-center">
-                                                            <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xs uppercase mr-3">
-                                                                {u.fullName?.charAt(0) || u.email?.charAt(0)}
-                                                            </div>
-                                                            <div className="text-sm font-medium text-gray-900">{u.fullName || 'Chưa cập nhật'}</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                                            {u.role}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {u.createdAt ? format(new Date(u.createdAt), 'dd/MM/yyyy') : 'N/A'}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {users.length === 0 && (
+                                {isLoading ? <div className="text-center py-10 opacity-50">Đang tải...</div> : (
+                                    <div className="overflow-x-auto rounded-xl border border-gray-100">
+                                        <table className="min-w-full divide-y divide-gray-200 text-sm md:text-base">
+                                            <thead className="bg-gray-50">
                                                 <tr>
-                                                    <td colSpan="4" className="px-6 py-8 text-center text-gray-500">Không tìm thấy người dùng nào.</td>
+                                                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Người dùng</th>
+                                                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
+                                                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                                                    <th className="px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
                                                 </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {users.map(u => (
+                                                    <tr key={u.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center">
+                                                                <div className="flex-shrink-0 h-10 w-10">
+                                                                    <img className="h-10 w-10 rounded-full" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName || 'User')}&background=random`} alt="" />
+                                                                </div>
+                                                                <div className="ml-4">
+                                                                    <div className="font-semibold text-gray-900">{u.fullName}</div>
+                                                                    <div className="text-gray-500 text-xs">{u.email}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                                {u.role}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                {u.isActive ? 'Hoạt động' : 'Đã Khóa'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                            {u.role !== 'ADMIN' && (
+                                                                <button
+                                                                    onClick={() => handleUserStatus(u.id, !u.isActive)}
+                                                                    className={`text-sm ${u.isActive ? 'text-red-600 hover:text-red-900' : 'text-emerald-600 hover:text-emerald-900'} font-semibold underline cursor-pointer`}
+                                                                >
+                                                                    {u.isActive ? 'Báo vi phạm & Khóa' : 'Mở khóa'}
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
                     </div>

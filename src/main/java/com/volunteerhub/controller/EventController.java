@@ -46,11 +46,13 @@ public class EventController {
         return ResponseEntity.ok(eventService.getAllEvents());
     }
 
-    // 4. Lấy danh sách sự kiện chờ duyệt (Dành cho Admin)
+    // 3.5 Xem danh sach su kien CHO DUYET (Danh cho Admin)
     @GetMapping("/pending")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<List<Event>> getPendingEvents() {
-        return ResponseEntity.ok(eventService.getPendingEvents());
+    public ResponseEntity<Page<Event>> getPendingEvents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(eventService.getPendingEvents(page, size));
     }
 
     // 4. Duyet hoac Tu choi su kien (Chi ADMIN)
@@ -75,5 +77,15 @@ public class EventController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(eventService.searchEvents(keyword, location, fromDate, toDate, page, size));
+    }
+
+    // 6. GET /events/{id} - Xem chi tiet 1 su kien
+    @GetMapping("/{id}")
+    public ResponseEntity<Event> getEventById(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(eventService.getEventById(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

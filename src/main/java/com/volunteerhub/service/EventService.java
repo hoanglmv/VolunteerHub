@@ -23,6 +23,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -57,9 +58,10 @@ public class EventService {
         return eventRepository.findAll();
     }
 
-    // 3.1 Lay danh sach su kien CHO DUYET (Cho Admin)
-    public List<Event> getPendingEvents() {
-        return eventRepository.findByStatus(EventStatus.PENDING);
+    // [NEW] 3.5 Lay Danh sach su kien dang cho duyet (Cho Admin)
+    public Page<Event> getPendingEvents(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return eventRepository.findByStatus(EventStatus.PENDING, pageable);
     }
 
     // 4. Duyet hoac Tu choi su kien
@@ -68,7 +70,17 @@ public class EventService {
                 .orElseThrow(() -> new RuntimeException("Khong tim thay su kien co ID: " + eventId));
 
         event.setStatus(status);
-        return eventRepository.save(event);
+        Event savedEvent = eventRepository.save(event);
+
+        if (status == EventStatus.APPROVED) {
+            notificationService.createNotification(event.getCreatedBy(),
+                    "Sự kiện '" + event.getTitle() + "' của bạn đã được duyệt!");
+        } else if (status == EventStatus.REJECTED) {
+            notificationService.createNotification(event.getCreatedBy(),
+                    "Sự kiện '" + event.getTitle() + "' của bạn đã bị từ chối.");
+        }
+
+        return savedEvent;
     }
 
     // 5. Tim kiem nang cao (Advanced Filtering)
@@ -76,5 +88,11 @@ public class EventService {
             int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return eventRepository.searchEventsAdvanced(keyword, location, fromDate, toDate, pageable);
+    }
+
+    // 6. Xem chi tiet 1 su kien
+    public Event getEventById(Long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Khong tim thay su kien co ID: " + eventId));
     }
 }

@@ -107,4 +107,30 @@ public class ParticipationService {
         }
         return participationRepository.save(p);
     }
+
+    // 6. [Gamification] Bang xep hang tinh nguyen vien
+    public java.util.List<java.util.Map<String, Object>> getLeaderboard() {
+        // Lay Top 50
+        Pageable topFifty = PageRequest.of(0, 50);
+        java.util.List<Object[]> results = participationRepository.findTopVolunteers(topFifty);
+
+        java.util.List<java.util.Map<String, Object>> leaderboard = new java.util.ArrayList<>();
+        for (Object[] row : results) {
+            User u = (User) row[0];
+            Long total = (Long) row[1];
+
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            // Tra ve cac thong tin co ban de hien thi, khong tra ve password hay auth info
+            java.util.Map<String, Object> userDto = new java.util.HashMap<>();
+            userDto.put("id", u.getId());
+            userDto.put("fullName", u.getFullName());
+            userDto.put("email", u.getEmail());
+            userDto.put("role", u.getRole());
+
+            map.put("user", userDto);
+            map.put("totalEvents", total);
+            leaderboard.add(map);
+        }
+        return leaderboard;
+    }
 }

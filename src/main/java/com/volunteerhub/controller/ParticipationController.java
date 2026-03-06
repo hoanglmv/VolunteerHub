@@ -66,4 +66,10 @@ public class ParticipationController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // 6. Xem bang xep hang: GET /participations/leaderboard
+    @GetMapping("/leaderboard")
+    public ResponseEntity<?> getLeaderboard() {
+        return ResponseEntity.ok(participationService.getLeaderboard());
+    }
 }

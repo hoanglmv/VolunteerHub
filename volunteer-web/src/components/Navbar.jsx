@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { HeartHandshake, LogOut, Search, Menu, X, Settings, User as UserIcon, LayoutDashboard } from 'lucide-react';
+import axiosClient from '../api/axiosClient';
+import { format } from 'date-fns';
+import { HeartHandshake, LogOut, Search, Menu, X, Settings, User as UserIcon, LayoutDashboard, Bell, Check, BellRing } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+    const [isNotiOpen, setIsNotiOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const dropdownRef = useRef(null);
+    const notiRef = useRef(null);
 
     // Fake token check, consider pulling this from a Context or actual local storage
     const token = localStorage.getItem('token');
@@ -23,10 +29,44 @@ const Navbar = () => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsProfileDropdownOpen(false);
             }
+            if (notiRef.current && !notiRef.current.contains(event.target)) {
+                setIsNotiOpen(false);
+            }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (token) {
+            fetchNotifications();
+        }
+    }, [token]);
+
+    const fetchNotifications = async () => {
+        try {
+            const res = await axiosClient.get('/notifications?page=0&size=10');
+            const notis = res.data.content || [];
+            setNotifications(notis);
+            setUnreadCount(notis.filter(n => !n.read).length);
+        } catch (error) {
+            console.error("Lỗi tải thông báo:", error);
+        }
+    };
+
+    const markAsRead = async (id) => {
+        try {
+            await axiosClient.put(`/notifications/${id}/read`);
+            fetchNotifications();
+        } catch (error) { }
+    };
+
+    const markAllAsRead = async () => {
+        try {
+            await axiosClient.put('/notifications/read-all');
+            fetchNotifications();
+        } catch (error) { }
+    };
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -55,6 +95,7 @@ const Navbar = () => {
                         <div className="flex items-center space-x-6">
                             <Link to="/" className="text-gray-600 hover:text-primary-600 font-semibold transition-colors">Trang Chủ</Link>
                             <Link to="/events" className="text-gray-600 hover:text-primary-600 font-semibold transition-colors">Tham gia tình nguyện</Link>
+                            <Link to="/leaderboard" className="text-gray-600 hover:text-primary-600 font-semibold transition-colors">Bảng Vàng</Link>
                         </div>
 
                         {/* Search Bar */}
@@ -73,12 +114,80 @@ const Navbar = () => {
                         {token ? (
                             <div className="flex items-center space-x-4">
                                 <Link
+                                    to="/create-news"
+                                    className="hidden lg:flex items-center space-x-1.5 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-full font-semibold transition-colors border border-blue-100/50"
+                                >
+                                    <span className="text-xl leading-none">+</span>
+                                    <span>Viết bài</span>
+                                </Link>
+                                <Link
                                     to="/create-event"
                                     className="hidden lg:flex items-center space-x-1.5 px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full font-semibold transition-colors border border-emerald-100/50"
                                 >
                                     <span className="text-xl leading-none">+</span>
                                     <span>Tạo Sự kiện</span>
                                 </Link>
+                                <div className="relative" ref={notiRef}>
+                                    <button
+                                        onClick={() => setIsNotiOpen(!isNotiOpen)}
+                                        className="relative p-2.5 text-gray-600 hover:bg-gray-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    >
+                                        <Bell className="h-6 w-6" />
+                                        {unreadCount > 0 && (
+                                            <span className="absolute top-1 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                                        )}
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {isNotiOpen && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+                                            >
+                                                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-50 bg-gray-50/50">
+                                                    <h3 className="font-bold text-gray-900">Thông báo</h3>
+                                                    {unreadCount > 0 && (
+                                                        <button
+                                                            onClick={markAllAsRead}
+                                                            className="text-xs text-primary-600 hover:text-primary-700 font-semibold"
+                                                        >
+                                                            Đánh dấu đã đọc
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="max-h-[300px] overflow-y-auto">
+                                                    {notifications.length === 0 ? (
+                                                        <div className="p-6 flex flex-col items-center justify-center text-gray-500">
+                                                            <BellRing className="w-8 h-8 mb-2 text-gray-300" />
+                                                            <p className="text-sm">Chưa có thông báo nào</p>
+                                                        </div>
+                                                    ) : (
+                                                        notifications.map(noti => (
+                                                            <div
+                                                                key={noti.id}
+                                                                onClick={() => !noti.read && markAsRead(noti.id)}
+                                                                className={`p-4 border-b border-gray-50 flex items-start space-x-3 transition-colors ${!noti.read ? 'bg-blue-50/50 cursor-pointer hover:bg-blue-50' : ''}`}
+                                                            >
+                                                                <div className={`mt-1 flex-shrink-0 w-2 h-2 rounded-full ${!noti.read ? 'bg-blue-500' : 'bg-transparent'}`}></div>
+                                                                <div className="flex-1">
+                                                                    <p className={`text-sm ${!noti.read ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+                                                                        {noti.message}
+                                                                    </p>
+                                                                    <span className="text-xs text-gray-400 mt-1 block">
+                                                                        {noti.createdAt ? format(new Date(noti.createdAt), 'dd/MM/yyyy HH:mm') : ''}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
                                 <div className="relative" ref={dropdownRef}>
                                     {/* Avatar Button */}
                                     <button
@@ -194,10 +303,13 @@ const Navbar = () => {
                             </div>
 
                             <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Trang Chủ</Link>
+                            <Link to="/events" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Tham gia tình nguyện</Link>
+                            <Link to="/leaderboard" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Bảng Vàng</Link>
 
                             {token && (
                                 <>
                                     <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Trang cá nhân</Link>
+                                    <Link to="/create-news" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors">Viết bài mới</Link>
                                     <Link to="/create-event" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors">Tạo sự kiện mới</Link>
                                 </>
                             )}

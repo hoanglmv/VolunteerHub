@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
@@ -8,9 +9,12 @@ import EventCard from '../components/EventCard';
 export default function HomePage() {
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [articles, setArticles] = useState([]);
+    const [isLoadingArticles, setIsLoadingArticles] = useState(true);
 
     useEffect(() => {
         fetchEvents();
+        fetchArticles();
     }, []);
 
     const fetchEvents = async () => {
@@ -23,6 +27,19 @@ export default function HomePage() {
             toast.error("Không thể tải danh sách sự kiện");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchArticles = async () => {
+        try {
+            setIsLoadingArticles(true);
+            const res = await axiosClient.get('/articles?page=0&size=3');
+            setArticles(res.data.content || []);
+        } catch (error) {
+            console.error(error);
+            // toast.error("Không thể tải tin tức");
+        } finally {
+            setIsLoadingArticles(false);
         }
     };
 
@@ -92,41 +109,30 @@ export default function HomePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {/* Dummy News Item 1 */}
-                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 group cursor-pointer hover:shadow-md transition-all">
-                            <div className="h-48 overflow-hidden">
-                                <img src="https://images.unsplash.com/photo-1593113565214-80afcb4a428a?auto=format&fit=crop&q=80&w=800" alt="News" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        {isLoadingArticles ? (
+                            <div className="col-span-full flex justify-center py-10">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                             </div>
-                            <div className="p-6">
-                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md mb-3 inline-block">Môi trường</span>
-                                <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2">Hơn 500 TNV ra quân dọn rác bãi biển Vũng Tàu cuối tuần qua</h3>
-                                <p className="text-gray-500 text-sm mt-2 line-clamp-2">Một nỗ lực tuyệt vời từ cộng đồng khi thu gom được hơn 2 tấn rác thải nhựa...</p>
+                        ) : articles.length === 0 ? (
+                            <div className="col-span-full text-center py-10 text-gray-500 bg-white rounded-2xl border border-dashed">
+                                Chưa có tin tức nào.
                             </div>
-                        </div>
-
-                        {/* Dummy News Item 2 */}
-                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 group cursor-pointer hover:shadow-md transition-all">
-                            <div className="h-48 overflow-hidden">
-                                <img src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&q=80&w=800" alt="News" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                            </div>
-                            <div className="p-6">
-                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md mb-3 inline-block">Giáo dục</span>
-                                <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2">Khai giảng lớp học tình thương cho trẻ em vùng cao</h3>
-                                <p className="text-gray-500 text-sm mt-2 line-clamp-2">Mang con chữ đến với trẻ em nghèo, xây dựng tương lai tươi sáng hơn...</p>
-                            </div>
-                        </div>
-
-                        {/* Dummy News Item 3 (Hidden on MD) */}
-                        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 group cursor-pointer hover:shadow-md transition-all hidden lg:block">
-                            <div className="h-48 overflow-hidden">
-                                <img src="https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&q=80&w=800" alt="News" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                            </div>
-                            <div className="p-6">
-                                <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-md mb-3 inline-block">Cộng đồng</span>
-                                <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2">Phát động chiến dịch Hiến máu nhân đạo mùa Hè 2026</h3>
-                                <p className="text-gray-500 text-sm mt-2 line-clamp-2">Mỗi giọt máu cho đi, một cuộc đời ở lại. Tham gia ngay tại điểm hiến máu gần nhất.</p>
-                            </div>
-                        </div>
+                        ) : (
+                            articles.map((article, index) => (
+                                <Link to={`/news/${article.id}`} key={article.id} className={`bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 group cursor-pointer hover:shadow-md transition-all block ${index === 2 ? 'hidden lg:block' : ''}`}>
+                                    <div className="h-48 overflow-hidden">
+                                        <img src={article.imageUrl || "https://images.unsplash.com/photo-1593113565214-80afcb4a428a?auto=format&fit=crop&q=80&w=800"} alt="News" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    </div>
+                                    <div className="p-6">
+                                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2">{article.title}</h3>
+                                        <p className="text-gray-500 text-sm mt-2 line-clamp-2">{article.content}</p>
+                                        <div className="mt-4 text-xs text-gray-400">
+                                            Bởi <span className="font-semibold text-gray-600">{article.author?.fullName}</span>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))
+                        )}
                     </div>
                 </div>
 

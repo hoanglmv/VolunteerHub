@@ -22,4 +22,8 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
 
     // Tìm record để hủy đăng ký
     Optional<Participation> findByUserIdAndEventId(Long userId, Long eventId);
+
+    // [Thành tích] Xếp hạng Tình nguyện viên theo số lượng sự kiện hoàn thành
+    @org.springframework.data.jpa.repository.Query("SELECT p.user, COUNT(p) as total FROM Participation p WHERE p.status = 'APPROVED' GROUP BY p.user ORDER BY total DESC")
+    java.util.List<Object[]> findTopVolunteers(Pageable pageable);
 }

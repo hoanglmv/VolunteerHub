@@ -52,15 +52,18 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // 4. Lấy danh sách Users (Cho Admin)
-    public org.springframework.data.domain.Page<User> searchUsers(String keyword, int page, int size) {
+    // [Admin] Lấy toàn bộ người dùng
+    public org.springframework.data.domain.Page<User> getAllUsers(int page, int size) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
-        return userRepository.searchUsers(keyword, pageable);
+        return userRepository.findAll(pageable);
     }
 
-    // 5. Xoá tài khoản cá nhân
-    public void deleteMyAccount() {
-        User user = getCurrentUser();
-        userRepository.delete(user);
+    // [Admin] Bật / Tắt tài khoản (Khóa/Mở Khóa)
+    public User changeUserStatus(Long userId, boolean isActive) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy user với id: " + userId));
+
+        user.setActive(isActive);
+        return userRepository.save(user);
     }
 }
