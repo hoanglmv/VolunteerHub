@@ -17,6 +17,9 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
     // Lấy danh sách đăng ký theo EventId
     Page<Participation> findByEventId(Long eventId, Pageable pageable);
 
+    // Custom Lấy toàn bộ không phần trang cho backend nội bộ
+    java.util.List<Participation> findByEventId(Long eventId);
+
     // Kiểm tra xem user đã đăng ký sự kiện này chưa (để tránh đăng ký trùng)
     boolean existsByUserIdAndEventId(Long userId, Long eventId);
 

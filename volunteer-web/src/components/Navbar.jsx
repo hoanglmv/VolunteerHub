@@ -95,6 +95,7 @@ const Navbar = () => {
                         <div className="flex items-center space-x-6">
                             <Link to="/" className="text-gray-600 hover:text-primary-600 font-semibold transition-colors">Trang Chủ</Link>
                             <Link to="/events" className="text-gray-600 hover:text-primary-600 font-semibold transition-colors">Tham gia tình nguyện</Link>
+                            <Link to="/my-events" className="text-gray-600 hover:text-primary-600 font-semibold transition-colors">Hoạt động của tôi</Link>
                             <Link to="/leaderboard" className="text-gray-600 hover:text-primary-600 font-semibold transition-colors">Bảng Vàng</Link>
                         </div>
 
@@ -209,7 +210,7 @@ const Navbar = () => {
                                             >
                                                 <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/50">
                                                     <p className="text-sm font-semibold text-gray-900 truncate">{username}</p>
-                                                    <p className="text-xs font-medium text-emerald-600 mt-0.5">{userRole === 'ADMIN' ? 'Quản trị viên' : 'Tình nguyện viên'}</p>
+                                                    <p className="text-xs font-medium text-emerald-600 mt-0.5">{(userRole === 'ADMIN' || userRole === 'ROLE_ADMIN') ? 'Quản trị viên' : 'Tình nguyện viên'}</p>
                                                 </div>
 
                                                 <div className="p-2 space-y-1">
@@ -222,7 +223,7 @@ const Navbar = () => {
                                                         <span>Trang cá nhân</span>
                                                     </Link>
 
-                                                    {userRole === 'ADMIN' && (
+                                                    {(userRole === 'ADMIN' || userRole === 'ROLE_ADMIN') && (
                                                         <Link
                                                             to="/admin"
                                                             onClick={() => setIsProfileDropdownOpen(false)}
@@ -304,6 +305,7 @@ const Navbar = () => {
 
                             <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Trang Chủ</Link>
                             <Link to="/events" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Tham gia tình nguyện</Link>
+                            <Link to="/my-events" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Hoạt động của tôi</Link>
                             <Link to="/leaderboard" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Bảng Vàng</Link>
 
                             {token && (
@@ -314,7 +316,7 @@ const Navbar = () => {
                                 </>
                             )}
 
-                            {userRole === 'ADMIN' && (
+                            {(userRole === 'ADMIN' || userRole === 'ROLE_ADMIN') && (
                                 <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block px-4 py-3 rounded-xl text-base font-semibold text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Quản Trị</Link>
                             )}
 
@@ -325,7 +327,7 @@ const Navbar = () => {
                                             <img src={avatarUrl} alt="Avatar" className="h-12 w-12 rounded-full ring-2 ring-primary-500 ring-offset-2" />
                                             <div>
                                                 <p className="font-bold text-gray-900">{username}</p>
-                                                <p className="text-sm font-medium text-emerald-600">{userRole === 'ADMIN' ? 'Quản trị viên' : 'Tình nguyện viên'}</p>
+                                                <p className="text-sm font-medium text-emerald-600">{(userRole === 'ADMIN' || userRole === 'ROLE_ADMIN') ? 'Quản trị viên' : 'Tình nguyện viên'}</p>
                                             </div>
                                         </div>
                                         <button

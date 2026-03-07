@@ -66,7 +66,7 @@ export default function EventsPage() {
                             <button
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
-                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-primary-600 text-white shadow-md' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`}
+                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-emerald-600 text-white shadow-md' : 'bg-transparent text-gray-600 hover:bg-gray-100'}`}
                             >
                                 {cat === 'All' ? 'Tất cả lĩnh vực' : cat}
                             </button>

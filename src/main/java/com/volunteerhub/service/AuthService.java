@@ -77,7 +77,7 @@ public class AuthService {
         if (!user.isActive()) {
             throw new RuntimeException("Tài khoản chưa được xác thực Email!");
         }
-        return jwtUtil.generateToken(user.getEmail());
+        return jwtUtil.generateToken(user.getEmail(), user.getRole().name());
     }
 
     // === XÁC THỰC EMAIL TỪ LINK ===

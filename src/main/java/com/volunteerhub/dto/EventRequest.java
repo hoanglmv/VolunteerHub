@@ -1,6 +1,6 @@
 package com.volunteerhub.dto;
 
-import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -17,9 +17,11 @@ public class EventRequest {
     private String location;
 
     @NotNull(message = "Thời gian bắt đầu không được để trống")
-    @Future(message = "Thời gian bắt đầu phải ở tương lai")
+    @FutureOrPresent(message = "Thời gian bắt đầu phải ở hiện tại hoặc tương lai")
     private LocalDateTime startTime;
 
     @NotNull(message = "Thời gian kết thúc không được để trống")
     private LocalDateTime endTime;
+
+    private Integer capacity;
 }

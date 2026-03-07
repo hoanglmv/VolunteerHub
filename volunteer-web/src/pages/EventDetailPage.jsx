@@ -180,12 +180,21 @@ export default function EventDetailPage() {
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleJoin}
-                            className="w-full mt-8 py-4 bg-gradient-to-r from-primary-500 to-emerald-500 hover:from-primary-600 hover:to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-primary-500/30 transition-all hover:-translate-y-1"
-                        >
-                            Đăng Ký Tham Gia
-                        </button>
+                        {(currentUser && typeof currentUser === 'string' ? currentUser : JSON.parse(localStorage.getItem('user'))?.email) === event.createdBy?.email ? (
+                            <button
+                                onClick={() => navigate(`/events/${id}/manage`)}
+                                className="w-full mt-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-1"
+                            >
+                                Quản lý Sự kiện
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleJoin}
+                                className="w-full mt-8 py-4 bg-gradient-to-r from-primary-500 to-emerald-500 hover:from-primary-600 hover:to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-primary-500/30 transition-all hover:-translate-y-1"
+                            >
+                                Đăng Ký Tham Gia
+                            </button>
+                        )}
                     </div>
 
                     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">

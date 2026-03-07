@@ -30,7 +30,8 @@ export default function CreateEventPage() {
             toast.success("Tạo sự kiện thành công! Chờ Admin duyệt nhé.");
             navigate('/');
         } catch (error) {
-            toast.error("Lỗi khi tạo sự kiện. Vui lòng kiểm tra lại thông tin.");
+            const msg = error.response?.data?.message || error.response?.data || "Lỗi khi tạo sự kiện. Vui lòng kiểm tra lại thông tin.";
+            toast.error(typeof msg === 'string' ? msg : "Lỗi khi tạo sự kiện. Vui lòng kiểm tra lại thông tin.");
             console.error(error);
         } finally {
             setIsLoading(false);
